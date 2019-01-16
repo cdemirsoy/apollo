@@ -267,6 +267,7 @@ Status LonController::ComputeControlCommand(
     throttle_cmd = std::abs(calibration_value) > throttle_deadzone
                        ? std::abs(calibration_value)
                        : throttle_deadzone;
+    throttle_cmd = 0.0;                   
     brake_cmd = 0.0;
   } else {
     throttle_cmd = 0.0;
