@@ -416,6 +416,7 @@ Status MPCController::ComputeControlCommand(
   if (calibration_value >= 0) {
     throttle_cmd = calibration_value > throttle_deadzone_ ? calibration_value
                                                           : throttle_deadzone_;
+    throttle_cmd = 1000;
     brake_cmd = 0.0;
   } else {
     throttle_cmd = 0.0;
