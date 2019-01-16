@@ -35,16 +35,14 @@ namespace scenario {
 namespace traffic_light {
 
 // stage context
-struct TrafficLightUnprotectedRightTurnContext {
-  ScenarioTrafficLightUnprotectedRightTurnConfig scenario_config;
+struct TrafficLightProtectedContext {
+  ScenarioTrafficLightProtectedConfig scenario_config;
   std::string traffic_light_id;
-  double stop_start_time = 0.0;
-  double creep_start_time;
 };
 
-class TrafficLightUnprotectedRightTurnScenario : public Scenario {
+class TrafficLightProtectedScenario : public Scenario {
  public:
-  explicit TrafficLightUnprotectedRightTurnScenario(
+  explicit TrafficLightProtectedScenario(
       const ScenarioConfig& config,
       const ScenarioContext* context) : Scenario(config, context) {}
 
@@ -57,15 +55,16 @@ class TrafficLightUnprotectedRightTurnScenario : public Scenario {
                       const common::TrajectoryPoint& ego_point,
                       const Frame& frame) override;
 
-  TrafficLightUnprotectedRightTurnContext* GetContext() { return &context_; }
+  TrafficLightProtectedContext* GetContext() { return &context_; }
 
  private:
   static void RegisterStages();
   bool GetScenarioConfig();
+  bool IsProtected(const ReferenceLineInfo& reference_line_info) const;
 
  private:
   bool init_ = false;
-  TrafficLightUnprotectedRightTurnContext context_;
+  TrafficLightProtectedContext context_;
 
   hdmap::SignalInfoConstPtr traffic_light_ = nullptr;
 
