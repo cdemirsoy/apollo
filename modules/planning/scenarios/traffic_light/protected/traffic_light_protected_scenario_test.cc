@@ -20,7 +20,7 @@
 
 #define protected public
 #define private public
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/traffic_light_unprotected_right_turn_scenario.h"
+#include "modules/planning/scenarios/traffic_light/protected/traffic_light_protected_scenario.h"
 
 #include "gtest/gtest.h"
 
@@ -33,40 +33,39 @@ namespace planning {
 namespace scenario {
 namespace traffic_light {
 
-class TrafficLightUnprotectedRightTurnScenarioTest : public ::testing::Test {
+class TrafficLightProtectedScenarioTest : public ::testing::Test {
  public:
   virtual void SetUp() {}
 
  protected:
-  std::unique_ptr<TrafficLightUnprotectedRightTurnScenario> scenario_;
+  std::unique_ptr<TrafficLightProtectedScenario> scenario_;
 };
 
-TEST_F(TrafficLightUnprotectedRightTurnScenarioTest, VerifyConf) {
-  FLAGS_scenario_traffic_light_unprotected_right_turn_config_file =
+TEST_F(TrafficLightProtectedScenarioTest, VerifyConf) {
+  FLAGS_scenario_traffic_light_protected_config_file =
       "/apollo/modules/planning/conf/"
-      "scenario/traffic_light_unprotected_right_turn_config.pb.txt";
+      "scenario/traffic_light_protected_config.pb.txt";
 
   ScenarioConfig config;
   EXPECT_TRUE(apollo::common::util::GetProtoFromFile(
-      FLAGS_scenario_traffic_light_unprotected_right_turn_config_file,
+      FLAGS_scenario_traffic_light_protected_config_file,
       &config));
 }
 
-TEST_F(TrafficLightUnprotectedRightTurnScenarioTest, Init) {
-  FLAGS_scenario_traffic_light_unprotected_right_turn_config_file =
+TEST_F(TrafficLightProtectedScenarioTest, Init) {
+  FLAGS_scenario_traffic_light_protected_config_file =
       "/apollo/modules/planning/testdata/conf/"
-      "scenario/traffic_light_unprotected_right_turn_config.pb.txt";
+      "scenario/traffic_light_protected_config.pb.txt";
 
   ScenarioConfig config;
   EXPECT_TRUE(apollo::common::util::GetProtoFromFile(
-      FLAGS_scenario_traffic_light_unprotected_right_turn_config_file,
+      FLAGS_scenario_traffic_light_protected_config_file,
       &config));
 
   ScenarioContext context;
-  scenario_.reset(new TrafficLightUnprotectedRightTurnScenario(config,
-                                                               &context));
+  scenario_.reset(new TrafficLightProtectedScenario(config, &context));
   EXPECT_EQ(scenario_->scenario_type(),
-            ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN);
+            ScenarioConfig::TRAFFIC_LIGHT_PROTECTED);
 }
 
 }  // namespace traffic_light

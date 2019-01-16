@@ -20,36 +20,38 @@
 
 #pragma once
 
+#include <string>
+
 #include "modules/planning/proto/planning_config.pb.h"
 
 #include "modules/planning/scenarios/stage.h"
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/traffic_light_unprotected_right_turn_scenario.h"
+#include "modules/planning/scenarios/traffic_light/protected/traffic_light_protected_scenario.h"
 
 namespace apollo {
 namespace planning {
 namespace scenario {
 namespace traffic_light {
 
-struct TrafficLightUnprotectedRightTurnContext;
+struct TrafficLightProtectedContext;
 
-class StageCreep : public Stage {
+class StageStop : public Stage {
  public:
-  explicit StageCreep(
+  explicit StageStop(
       const ScenarioConfig::StageConfig& config) : Stage(config) {}
 
  private:
-  Stage::StageStatus Process(const common::TrajectoryPoint& planning_init_point,
-                             Frame* frame) override;
-
-  TrafficLightUnprotectedRightTurnContext* GetContext() {
-    return Stage::GetContextAs<TrafficLightUnprotectedRightTurnContext>();
+  Stage::StageStatus Process(
+      const common::TrajectoryPoint& planning_init_point,
+      Frame* frame) override;
+  TrafficLightProtectedContext* GetContext() {
+    return GetContextAs<TrafficLightProtectedContext>();
   }
 
  private:
   Stage::StageStatus FinishStage();
 
  private:
-  ScenarioTrafficLightUnprotectedRightTurnConfig scenario_config_;
+  ScenarioTrafficLightProtectedConfig scenario_config_;
 };
 
 }  // namespace traffic_light

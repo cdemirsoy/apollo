@@ -21,6 +21,7 @@
 #include "modules/prediction/evaluator/vehicle/cost_evaluator.h"
 #include "modules/prediction/evaluator/vehicle/cruise_mlp_evaluator.h"
 #include "modules/prediction/evaluator/vehicle/junction_mlp_evaluator.h"
+#include "modules/prediction/evaluator/vehicle/lane_scanning_evaluator.h"
 #include "modules/prediction/evaluator/vehicle/mlp_evaluator.h"
 #include "modules/prediction/evaluator/vehicle/rnn_evaluator.h"
 #include "modules/prediction/evaluator/cyclist/cyclist_keep_lane_evaluator.h"
@@ -40,6 +41,7 @@ void EvaluatorManager::RegisterEvaluators() {
   RegisterEvaluator(ObstacleConf::CRUISE_MLP_EVALUATOR);
   RegisterEvaluator(ObstacleConf::JUNCTION_MLP_EVALUATOR);
   RegisterEvaluator(ObstacleConf::CYCLIST_KEEP_LANE_EVALUATOR);
+  RegisterEvaluator(ObstacleConf::LANE_SCANNING_EVALUATOR);
 }
 
 void EvaluatorManager::Init(const PredictionConf& config) {
@@ -102,26 +104,18 @@ Evaluator* EvaluatorManager::GetEvaluator(
   return it != evaluators_.end() ? it->second.get() : nullptr;
 }
 
-void EvaluatorManager::Run(
-    const perception::PerceptionObstacles& perception_obstacles) {
-  auto container =
+void EvaluatorManager::Run() {
+  auto obstacles_container =
       ContainerManager::Instance()->GetContainer<ObstaclesContainer>(
           AdapterConfig::PERCEPTION_OBSTACLES);
-  CHECK_NOTNULL(container);
+  CHECK_NOTNULL(obstacles_container);
 
-  for (const auto& perception_obstacle :
-       perception_obstacles.perception_obstacle()) {
-    if (!perception_obstacle.has_id()) {
-      AERROR << "A perception obstacle has no id.";
-      continue;
-    }
-
-    int id = perception_obstacle.id();
+  for (int id : obstacles_container->curr_frame_predictable_obstacle_ids()) {
     if (id < 0) {
-      AERROR << "A perception obstacle has invalid id [" << id << "].";
+      ADEBUG << "The obstacle has invalid id [" << id << "].";
       continue;
     }
-    Obstacle* obstacle = container->GetObstacle(id);
+    Obstacle* obstacle = obstacles_container->GetObstacle(id);
 
     if (obstacle == nullptr) {
       continue;
@@ -198,6 +192,10 @@ std::unique_ptr<Evaluator> EvaluatorManager::CreateEvaluator(
     }
     case ObstacleConf::CYCLIST_KEEP_LANE_EVALUATOR: {
       evaluator_ptr.reset(new CyclistKeepLaneEvaluator());
+      break;
+    }
+    case ObstacleConf::LANE_SCANNING_EVALUATOR: {
+      evaluator_ptr.reset(new LaneScanningEvaluator());
       break;
     }
     default: { break; }

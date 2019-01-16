@@ -18,7 +18,7 @@
  * @file
  **/
 
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/traffic_light_unprotected_right_turn_scenario.h"
+#include "modules/planning/scenarios/traffic_light/protected/traffic_light_protected_scenario.h"
 
 #include "modules/perception/proto/perception_obstacle.pb.h"
 #include "modules/perception/proto/traffic_light_detection.pb.h"
@@ -29,9 +29,8 @@
 #include "modules/common/vehicle_state/vehicle_state_provider.h"
 #include "modules/planning/common/frame.h"
 #include "modules/planning/common/planning_context.h"
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/stage_creep.h"
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/stage_intersection_cruise.h"
-#include "modules/planning/scenarios/traffic_light/unprotected_right_turn/stage_stop.h"
+#include "modules/planning/scenarios/traffic_light/protected/stage_intersection_cruise.h"
+#include "modules/planning/scenarios/traffic_light/protected/stage_stop.h"
 
 namespace apollo {
 namespace planning {
@@ -41,7 +40,7 @@ namespace traffic_light {
 using hdmap::HDMapUtil;
 using perception::TrafficLight;
 
-void TrafficLightUnprotectedRightTurnScenario::Init() {
+void TrafficLightProtectedScenario::Init() {
   if (init_) {
     return;
   }
@@ -73,30 +72,25 @@ void TrafficLightUnprotectedRightTurnScenario::Init() {
 apollo::common::util::Factory<
     ScenarioConfig::StageType, Stage,
     Stage* (*)(const ScenarioConfig::StageConfig& stage_config)>
-    TrafficLightUnprotectedRightTurnScenario::s_stage_factory_;
+    TrafficLightProtectedScenario::s_stage_factory_;
 
-void TrafficLightUnprotectedRightTurnScenario::RegisterStages() {
+void TrafficLightProtectedScenario::RegisterStages() {
   if (!s_stage_factory_.Empty()) {
     s_stage_factory_.Clear();
   }
   s_stage_factory_.Register(
-      ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN_STOP,
+      ScenarioConfig::TRAFFIC_LIGHT_PROTECTED_STOP,
       [](const ScenarioConfig::StageConfig& config) -> Stage* {
         return new StageStop(config);
       });
   s_stage_factory_.Register(
-      ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN_CREEP,
-      [](const ScenarioConfig::StageConfig& config) -> Stage* {
-        return new StageCreep(config);
-      });
-  s_stage_factory_.Register(
-      ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN_INTERSECTION_CRUISE,
+      ScenarioConfig::TRAFFIC_LIGHT_PROTECTED_INTERSECTION_CRUISE,
       [](const ScenarioConfig::StageConfig& config) -> Stage* {
         return new StageIntersectionCruise(config);
       });
 }
 
-std::unique_ptr<Stage> TrafficLightUnprotectedRightTurnScenario::CreateStage(
+std::unique_ptr<Stage> TrafficLightProtectedScenario::CreateStage(
     const ScenarioConfig::StageConfig& stage_config) {
   if (s_stage_factory_.Empty()) {
     RegisterStages();
@@ -109,7 +103,7 @@ std::unique_ptr<Stage> TrafficLightUnprotectedRightTurnScenario::CreateStage(
   return ptr;
 }
 
-bool TrafficLightUnprotectedRightTurnScenario::IsTransferable(
+bool TrafficLightProtectedScenario::IsTransferable(
     const Scenario& current_scenario,
     const common::TrajectoryPoint& ego_point,
     const Frame& frame) {
@@ -128,7 +122,7 @@ bool TrafficLightUnprotectedRightTurnScenario::IsTransferable(
   const double adc_speed =
       common::VehicleStateProvider::Instance()->linear_velocity();
 
-  auto scenario_config = config_.traffic_light_unprotected_right_turn_config();
+  auto scenario_config = config_.traffic_light_protected_config();
 
   bool is_stopped_for_traffic_light = true;
   if (adc_speed > scenario_config.max_adc_stop_speed() ||
@@ -138,25 +132,21 @@ bool TrafficLightUnprotectedRightTurnScenario::IsTransferable(
         << "] adc_distance_to_stop_line[" << adc_distance_to_stop_line << "]";
   }
 
-  const double forward_buffer = 5.0;
-  bool right_turn = reference_line_info.IsRightTurnPath(forward_buffer);
-
   switch (current_scenario.scenario_type()) {
     case ScenarioConfig::LANE_FOLLOW:
     case ScenarioConfig::CHANGE_LANE:
     case ScenarioConfig::SIDE_PASS:
     case ScenarioConfig::APPROACH:
-      return (is_stopped_for_traffic_light && right_turn &&
-          PlanningContext::GetScenarioInfo()->traffic_light_color ==
-              TrafficLight::RED);
+      return (is_stopped_for_traffic_light && IsProtected(reference_line_info));
     case ScenarioConfig::STOP_SIGN_PROTECTED:
     case ScenarioConfig::STOP_SIGN_UNPROTECTED:
-    case ScenarioConfig::TRAFFIC_LIGHT_PROTECTED:
-    case ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_LEFT_TURN:
       return false;
-    case ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN:
+    case ScenarioConfig::TRAFFIC_LIGHT_PROTECTED:
       return (current_scenario.GetStatus() !=
               Scenario::ScenarioStatus::STATUS_DONE);
+    case ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_LEFT_TURN:
+    case ScenarioConfig::TRAFFIC_LIGHT_UNPROTECTED_RIGHT_TURN:
+      return false;
     default:
       break;
   }
@@ -167,13 +157,37 @@ bool TrafficLightUnprotectedRightTurnScenario::IsTransferable(
 /*
  * read scenario specific configs and set in context_ for stages to read
  */
-bool TrafficLightUnprotectedRightTurnScenario::GetScenarioConfig() {
-  if (!config_.has_traffic_light_unprotected_right_turn_config()) {
+bool TrafficLightProtectedScenario::GetScenarioConfig() {
+  if (!config_.has_traffic_light_protected_config()) {
     AERROR << "miss scenario specific config";
     return false;
   }
   context_.scenario_config.CopyFrom(
-      config_.traffic_light_unprotected_right_turn_config());
+      config_.traffic_light_protected_config());
+  return true;
+}
+
+bool TrafficLightProtectedScenario::IsProtected(
+    const ReferenceLineInfo& reference_line_info) const {
+  const double forward_buffer = 5.0;
+  bool left_turn = reference_line_info.IsLeftTurnPath(forward_buffer);
+  if (left_turn) {
+    // TODO(all): add arrow-left check
+    return false;
+  }
+
+  bool right_turn = reference_line_info.IsRightTurnPath(forward_buffer);
+  if (right_turn) {
+    return (PlanningContext::GetScenarioInfo()->traffic_light_color ==
+        TrafficLight::GREEN);
+  }
+
+  bool u_turn = reference_line_info.IsUTurnPath(forward_buffer);
+  if (u_turn) {
+    // TODO(all): add arrow-u-turn check
+    return false;
+  }
+
   return true;
 }
 
