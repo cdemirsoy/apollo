@@ -413,14 +413,14 @@ Status MPCController::ComputeControlCommand(
 
   double throttle_cmd = 0.0;
   double brake_cmd = 0.0;
+  
   if (calibration_value >= 0) {
     throttle_cmd = calibration_value > throttle_deadzone_ ? calibration_value
                                                           : throttle_deadzone_;
-    throttle_cmd = 100.0;
+    throttle_cmd = 0.0;
     brake_cmd = 0.0;
   } else {
-    throttle_cmd = 100.0;
-    //brake_cmd = 0.0;
+    throttle_cmd = 0.0;
     brake_cmd = -calibration_value > brake_deadzone_ ? -calibration_value
                                                      : brake_deadzone_;
   }
