@@ -58,7 +58,7 @@ Status VehicleStateProvider::Update(
   }
 
   if (chassis.has_speed_mps()) {
-    vehicle_state_.set_linear_velocity(chassis.speed_mps());
+    vehicle_state_.set_linear_velocity(chassis.speed_mps()+100.0);
     if (!FLAGS_reverse_heading_vehicle_state &&
         vehicle_state_.gear() == canbus::Chassis::GEAR_REVERSE) {
       vehicle_state_.set_linear_velocity(-vehicle_state_.linear_velocity());
